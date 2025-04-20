@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- v1_k3scluster.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

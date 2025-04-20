@@ -25,24 +25,10 @@ tasks:
         fi
 
   new:api:
-    desc: create a new api
-
+    description: create a new api
     env:
       kind:
         required: true
-
-      version:
-        default:
-          value: "v1"
-
-    # preconditions:
-    #   - sh: test -f "PROJECT"
-    #     msg: run `task init` first
-    # requires:
-    #   vars:
-    #     - kind
-    # vars:
-    #   version: '$version | default "v1"'
-    cmds:
-      - |
-        kubebuilder create api --version $version --kind $kind --resource --controller
+      version: "v1"
+    cmd:
+      - kubebuilder create api --version "$version" --kind "$kind" --resource --controller
