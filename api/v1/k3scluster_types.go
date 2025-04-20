@@ -18,7 +18,6 @@ package v1
 
 import (
 	"github.com/kloudlite/operator/toolkit/reconciler"
-	"github.com/kloudlite/plugin-k3s-cluster/internal/aws"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,11 +41,11 @@ const (
 )
 
 type AWS struct {
-	Credentials *aws.Credentials `json:"credentials,omitempty"`
-	Region      aws.Region       `json:"region"`
-	VPC         *aws.VPC         `json:"vpc,omitempty" graphql:"noinput"`
+	Credentials *AwsCredentials `json:"credentials,omitempty"`
+	Region      AwsRegion       `json:"region"`
+	VPC         *AwsVPC         `json:"vpc,omitempty"`
 
-	MasterNodes []aws.Node `json:"masterNodes"`
+	MasterNodes []AwsNode `json:"masterNodes"`
 }
 
 // K3sClusterSpec defines the desired state of K3sCluster.
