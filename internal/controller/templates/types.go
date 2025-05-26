@@ -15,6 +15,6 @@ type ClusterLifecycleSpecTemplateArgs struct {
 
 	ValuesJSON string
 
-	// OutputSecretName      string
-	// OutputSecretNamespace string
+	OutputSecretName      string
+	OutputSecretNamespace string
 }

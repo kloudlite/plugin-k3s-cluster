@@ -1,0 +1,28 @@
+apiVersion: plugin-k3s-cluster.kloudlite.github.com/v1
+kind: K3sCluster
+metadata:
+  name: sample-cluster
+  namespace: "test-cluster"
+spec:
+  clusterState: "running"
+  cloudProvider: aws
+  kloudliteMeta:
+    release: "v1.1.6-nightly"
+    ingressSubDomain: "sample-cluster.demo.kloudlite.io"
+  aws:
+    region: ap-south-1
+    vpc:
+      id: "vpc-095224a927e8f0448"
+      publicSubnets:
+        - az: "ap-south-1a"
+          subnetID: "subnet-079d3aece03774a8a"
+
+    instanceProfile: "kloudlite-platform-InstanceProfile-BA4SRJO4KCNl"
+
+    masterNodes:
+      - name: "master-1"
+        ami: "ami-05c179eced2eb9b5b"
+        instanceType: "t3.medium"
+        rootVolumeSize: 50
+        rootVolumeType: "gp3"
+        az: "ap-south-1a"

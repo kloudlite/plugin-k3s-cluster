@@ -48,12 +48,14 @@ spec:
                       secretKey:
                         type: string
                     type: object
+                  instanceProfile:
+                    type: string
                   masterNodes:
                     items:
                       properties:
                         ami:
                           type: string
-                        availabilityZone:
+                        az:
                           type: string
                         instanceType:
                           type: string
@@ -67,7 +69,7 @@ spec:
                           type: string
                       required:
                       - ami
-                      - availabilityZone
+                      - az
                       - instanceType
                       - name
                       - rootVolumeSize
@@ -97,8 +99,10 @@ spec:
                     - publicSubnets
                     type: object
                 required:
+                - instanceProfile
                 - masterNodes
                 - region
+                - vpc
                 type: object
               cloudProvider:
                 enum:
@@ -109,9 +113,20 @@ spec:
                 - running
                 - stopped
                 type: string
+              kloudliteMeta:
+                properties:
+                  ingressSubDomain:
+                    type: string
+                  release:
+                    type: string
+                required:
+                - ingressSubDomain
+                - release
+                type: object
             required:
             - cloudProvider
             - clusterState
+            - kloudliteMeta
             type: object
           status:
             properties:

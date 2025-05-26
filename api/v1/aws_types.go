@@ -20,13 +20,13 @@ type AwsVPC struct {
 
 // +kubebuilder:object:generate=true
 type AwsNode struct {
-	Name             string `json:"name"`
-	AMI              string `json:"ami"`
-	InstanceType     string `json:"instanceType"`
-	RootVolumeSize   int    `json:"rootVolumeSize"`
-	RootVolumeType   string `json:"rootVolumeType"`
-	K3sVersion       string `json:"k3sVersion,omitempty"`
-	AvailabilityZone string `json:"availabilityZone"`
+	Name           string `json:"name"`
+	AMI            string `json:"ami"`
+	InstanceType   string `json:"instanceType"`
+	RootVolumeSize int    `json:"rootVolumeSize"`
+	RootVolumeType string `json:"rootVolumeType"`
+	K3sVersion     string `json:"k3sVersion,omitempty"`
+	AZ             string `json:"az"`
 }
 
 // +kubebuilder:object:generate=true

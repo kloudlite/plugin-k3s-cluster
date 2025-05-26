@@ -22,7 +22,7 @@ onApply:
             value: "true"
 
           - name: KUBE_NAMESPACE
-            value: {{.TfWorkspaceNamespace | squote}}
+            value: {{.TFWorkspaceNamespace | squote}}
         command:
           - bash
           - -c
@@ -32,7 +32,7 @@ onApply:
 
             eval $DECOMPRESS_CMD
 
-            pushd "$TEMPLATES_DIR/{{.CloudProvider}}/work-machine"
+            pushd "$TEMPLATES_DIR/{{.CloudProvider}}/cluster"
 
             envsubst < state-backend.tf.tpl > state-backend.tf
 
@@ -47,15 +47,15 @@ onApply:
             terraform plan -parallelism=2 --var-file ./values.json -out=tfplan -no-color 2>&1 | tee /dev/termination-log
             terraform apply -parallelism=2 -no-color tfplan 2>&1 | tee /dev/termination-log
 
-            {{- /* # terraform state pull | jq '.outputs' -r > outputs.json */}}
-            {{- /* cat > secret.yml <<EOF */}}
-            {{- /* apiVersion: v1 */}}
-            {{- /* kind: Secret */}}
-            {{- /* metadata: */}}
-            {{- /*   name: {{.OutputSecretName}} */}}
-            {{- /*   namespace: {{.OutputSecretNamespace}} */}}
-            {{- /* data: $(terraform state pull | jq '.outputs' -r -c) */}}
-            {{- /* EOF */}}
+            # terraform state pull | jq '.outputs' -r > outputs.json
+            cat > secret.yml <<EOF
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: {{.OutputSecretName}}
+              namespace: {{.OutputSecretNamespace}}
+            stringData: $(terraform state pull | jq '.outputs' -r -c)
+            EOF
 
             kubectl apply -f secret.yml --server-side
 
@@ -84,7 +84,7 @@ onDelete:
             value: "true"
 
           - name: KUBE_NAMESPACE
-            value: {{.TfWorkspaceNamespace | squote}}
+            value: {{.TFWorkspaceNamespace | squote}}
         command:
           - bash
           - -c
@@ -94,7 +94,7 @@ onDelete:
 
             eval $DECOMPRESS_CMD
 
-            pushd "$TEMPLATES_DIR/{{.CloudProvider}}/work-machine"
+            pushd "$TEMPLATES_DIR/{{.CloudProvider}}/cluster"
 
             envsubst < state-backend.tf.tpl > state-backend.tf
 
@@ -108,8 +108,7 @@ onDelete:
             terraform init -no-color 2>&1 | tee /dev/termination-log
             terraform plan -parallelism=2 --destroy --var-file ./values.json -out=tfplan -no-color 2>&1 | tee /dev/termination-log
             terraform apply -parallelism=2 -no-color tfplan 2>&1 | tee /dev/termination-log
-
-            {{- /* kubectl delete secret/{{.OutputSecretName}} -n {{.OutputSecretNamespace}} --ignore-not-found=true */}}
+            kubectl delete secret/{{.OutputSecretName}} -n {{.OutputSecretNamespace}} --ignore-not-found=true
     restartPolicy: Never
 
 {{ end }}

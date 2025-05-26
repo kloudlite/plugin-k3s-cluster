@@ -7,8 +7,6 @@ type Env struct {
 
 	IACJobsNamespace string `env:"IAC_JOBS_NAMESPACE" required:"true"`
 	IACJobImage      string `env:"IAC_JOB_IMAGE" required:"true"`
-
-	TFStateSecretNamespace string `env:"TF_STATE_SECRET_NAMESPACE" required:"true" default:"kloudlite"`
 }
 
 func LoadEnv() (*Env, error) {

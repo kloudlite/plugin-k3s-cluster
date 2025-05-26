@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	crdsv1 "github.com/kloudlite/operator/apis/crds/v1"
+	fn "github.com/kloudlite/operator/toolkit/functions"
 	"github.com/kloudlite/operator/toolkit/reconciler"
 	step_result "github.com/kloudlite/operator/toolkit/reconciler/step-result"
 	v1 "github.com/kloudlite/plugin-k3s-cluster/api/v1"
@@ -103,6 +104,7 @@ func (r *K3sClusterReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 }
 
 func (r *K3sClusterReconciler) finalize(req *reconciler.Request[*v1.K3sCluster]) step_result.Result {
+	ctx, obj := req.Context(), req.Object
 	check := reconciler.NewRunningCheck("finalizing", req)
 
 	if step := req.EnsureCheckList([]reconciler.CheckMeta{
@@ -111,8 +113,8 @@ func (r *K3sClusterReconciler) finalize(req *reconciler.Request[*v1.K3sCluster])
 		return step
 	}
 
-	if result := req.CleanupOwnedResources(check); !result.ShouldProceed() {
-		return result
+	if err := fn.DeleteAndWait(ctx, req.Logger, r.Client, &crdsv1.Lifecycle{ObjectMeta: metav1.ObjectMeta{Name: obj.Name, Namespace: obj.Namespace}}); err != nil {
+		return check.Failed(err)
 	}
 
 	return req.Finalize()
@@ -127,11 +129,17 @@ func (r *K3sClusterReconciler) parseSpecToVarFileJson(req *reconciler.Request[*v
 				return nil, fmt.Errorf(".spec.aws must be set when cloud provider is %s", obj.Spec.CloudProvider)
 			}
 
+			subnetsMap := make(map[string]string, len(obj.Spec.AWS.VPC.PublicSubnets))
+			for _, sub := range obj.Spec.AWS.VPC.PublicSubnets {
+				subnetsMap[sub.AZ] = sub.SubnetID
+			}
+
 			return json.Marshal(map[string]any{
-				"cluster_name":  obj.Name,
-				"aws_region":    "",
-				"vpc_id":        obj.Spec.AWS.VPC.ID,
-				"cluster_state": obj.Spec.ClusterState,
+				"cluster_name":                     obj.Name,
+				"aws_region":                       obj.Spec.AWS.Region,
+				"vpc_id":                           obj.Spec.AWS.VPC.ID,
+				"master_node_iam_instance_profile": obj.Spec.AWS.InstanceProfile,
+				"cluster_state":                    obj.Spec.ClusterState,
 				"master_nodes": func() []map[string]any {
 					nodes := make([]map[string]any, 0, len(obj.Spec.AWS.MasterNodes))
 					for _, node := range obj.Spec.AWS.MasterNodes {
@@ -139,16 +147,16 @@ func (r *K3sClusterReconciler) parseSpecToVarFileJson(req *reconciler.Request[*v
 							"name":              node.Name,
 							"ami":               node.AMI,
 							"instance_type":     node.InstanceType,
-							"availability_zone": node.AvailabilityZone,
-							"vpc_subnet_id":     obj.Spec.AWS.VPC.ID,
+							"availability_zone": node.AZ,
+							"vpc_subnet_id":     subnetsMap[node.AZ],
 							"root_volume_size":  node.RootVolumeSize,
 							"root_volume_type":  node.RootVolumeType,
 						})
 					}
 					return nodes
 				}(),
-				"kloudlite_release": "v1.1.6-nightly",
-				"base_domain":       "cluster@kloudlite.io",
+				"kloudlite_release": obj.Spec.Release,
+				"base_domain":       obj.Spec.IngressSubDomain,
 			})
 		}
 	default:
@@ -168,22 +176,26 @@ func (r *K3sClusterReconciler) createClusterLifecycleJob(req *reconciler.Request
 	}
 
 	b, err := templates.ParseBytes(r.ClusterLifecycleSpecTemplate, templates.ClusterLifecycleSpecTemplateArgs{
-		Tolerations:          []corev1.Toleration{},
-		NodeSelector:         map[string]string{},
-		JobImage:             r.Env.IACJobImage,
-		CloudProvider:        obj.Spec.CloudProvider.String(),
-		TFWorkspaceName:      obj.Name,
-		TFWorkspaceNamespace: obj.Namespace,
-		ValuesJSON:           string(valuesJSON),
+		Tolerations:           []corev1.Toleration{},
+		NodeSelector:          map[string]string{},
+		JobImage:              r.Env.IACJobImage,
+		CloudProvider:         obj.Spec.CloudProvider.String(),
+		TFWorkspaceName:       obj.Name,
+		TFWorkspaceNamespace:  obj.Namespace,
+		ValuesJSON:            string(valuesJSON),
+		OutputSecretName:      fmt.Sprintf("%s-outputs", obj.Name),
+		OutputSecretNamespace: obj.Namespace,
 	})
 	if err != nil {
 		return check.Failed(err)
 	}
 
 	lf := &crdsv1.Lifecycle{ObjectMeta: metav1.ObjectMeta{Name: obj.Name, Namespace: obj.Namespace}}
-	controllerutil.CreateOrUpdate(ctx, r.Client, lf, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, lf, func() error {
 		return yaml.Unmarshal(b, &lf.Spec)
-	})
+	}); err != nil {
+		return check.Failed(err)
+	}
 
 	if lf.HasCompleted() {
 		switch lf.Status.Phase {

@@ -41,11 +41,17 @@ const (
 )
 
 type AWS struct {
-	Credentials *AwsCredentials `json:"credentials,omitempty"`
-	Region      AwsRegion       `json:"region"`
-	VPC         *AwsVPC         `json:"vpc,omitempty"`
+	Credentials     *AwsCredentials `json:"credentials,omitempty"`
+	Region          AwsRegion       `json:"region"`
+	VPC             AwsVPC          `json:"vpc"`
+	InstanceProfile string          `json:"instanceProfile"`
 
 	MasterNodes []AwsNode `json:"masterNodes"`
+}
+
+type KloudliteMeta struct {
+	Release          string `json:"release"`
+	IngressSubDomain string `json:"ingressSubDomain"`
 }
 
 // K3sClusterSpec defines the desired state of K3sCluster.
@@ -54,6 +60,8 @@ type K3sClusterSpec struct {
 	AWS           *AWS          `json:"aws,omitempty"`
 
 	ClusterState ClusterState `json:"clusterState"`
+
+	KloudliteMeta `json:"kloudliteMeta"`
 }
 
 // +kubebuilder:object:root=true
